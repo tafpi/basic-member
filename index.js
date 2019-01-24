@@ -6,46 +6,69 @@ const LocalStrategy = require('passport-local').Strategy;
 const cookieSession = require('cookie-session');
 const flash = require('connect-flash');
 const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+const morgan = require('morgan');
+const cookieParser = require('cookie-parser');
+const session = require('express-session');
+
+let User = require('./models/user');
+
+// database connection
+mongoose.connect('mongodb://localhost:27017/basic-member', { useNewUrlParser: true });
+var db = mongoose.connection;
+db.on('error', console.error.bind(console, 'connection error:'));
+db.once('open', () => {
+    // console.log(db);
+    console.log("we're connected!");
+});
+
+app.use(morgan('dev'));
 
 // cookieSession config
-app.use(cookieSession({
-    maxAge: 24 * 60 * 60 * 1000, // One day in milliseconds
-    keys: ['randomstringhere']
+app.use(cookieParser());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(session({
+    secret: 'keyboard cat',
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: true }
 }));
+app.use(flash());
 
 app.use(passport.initialize()); // Used to initialize passport
 app.use(passport.session()); // Used to persist login sessions
 
-app.use(flash())
-
-app.set('view engine', 'ejs');
-
 // Strategy config
 passport.use(new LocalStrategy(
     function (username, password, done) {
-        console.log('sdf');
         User.findOne({ username: username }, function (err, user) {
             if (err) { return done(err); }
             if (!user) {
+                console.log('uname');
                 return done(null, false, { message: 'Incorrect username.' });
             }
-            if (!user.validPassword(password)) {
+            if (user.password != password) {
+                console.log('pword');
                 return done(null, false, { message: 'Incorrect password.' });
             }
-            return done(null, user);
+            console.log('corr');
+            return done(null, user, 'message sample');
         });
     }
 ));
 
-// Used to stuff a piece of information into a cookie
-passport.serializeUser((user, done) => {
-    done(null, user);
+passport.serializeUser(function (user, done) {
+    done(null, user.id);
 });
 
-// Used to decode the received cookie and persist session
-passport.deserializeUser((user, done) => {
-    done(null, user);
+passport.deserializeUser(function (id, done) {
+    User.findById(id, function (err, user) {
+        done(err, user);
+    });
 });
+
+// view engine
+app.set('view engine', 'pug');
 
 // Middleware to check if the user is authenticated
 function isUserAuthenticated(req, res, next) {
@@ -58,29 +81,29 @@ function isUserAuthenticated(req, res, next) {
 
 // Routes
 app.get('/', (req, res) => {
-    res.render('index.ejs');
+    res.render('index');
 });
+
+
+app.get('/login', (req, res) => {
+    console.log(req.flash('message'));
+    res.render('login', {
+        message: req.flash()
+    });
+});
+
+app.post('/login', passport.authenticate('local', {
+        successRedirect: '/',
+        failureRedirect: '/login',
+        failureFlash: true,
+        successFlash: true
+    })
+);
 
 // Secret route
 app.get('/secret', isUserAuthenticated, (req, res) => {
     res.send('You have reached the secret route');
 });
-
-app.get('/login', (req, res)=>{
-    res.render('login')
-})
-
-app.post('/login', 
-    passport.authenticate('local', {
-        successRedirect: '/',
-        failureRedirect: '/login',
-        failureFlash: true
-    }),
-    (req, res) => {
-        console.log('dfg');
-        res.redirect('/');
-    },
-);
 
 // Logout route
 app.get('/logout', (req, res) => {

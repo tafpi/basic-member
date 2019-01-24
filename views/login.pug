@@ -1,0 +1,10 @@
+h1 Login
+p #{message}
+form(method='POST', action='/login')
+    #form-group
+        label Username:
+        input.form-control(name='username', type='text')
+    #form-group
+        label Password:
+        input.form-control(name='password', type='text')
+    input.btn.btn-primary(type='submit', value='Submit')
