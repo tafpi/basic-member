@@ -18,7 +18,6 @@ mongoose.connect('mongodb://localhost:27017/basic-member', { useNewUrlParser: tr
 var db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', () => {
-    // console.log(db);
     console.log("we're connected!");
 });
 
@@ -30,8 +29,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(session({
     secret: 'keyboard cat',
     resave: false,
-    saveUninitialized: true,
-    cookie: { secure: true }
+    saveUninitialized: true
 }));
 app.use(flash());
 
@@ -39,20 +37,22 @@ app.use(passport.initialize()); // Used to initialize passport
 app.use(passport.session()); // Used to persist login sessions
 
 // Strategy config
-passport.use(new LocalStrategy(
-    function (username, password, done) {
+passport.use(new LocalStrategy({
+        passReqToCallback: true // allows us to pass back the entire request to the callback
+    },
+    function (req, username, password, done) {
         User.findOne({ username: username }, function (err, user) {
             if (err) { return done(err); }
             if (!user) {
                 console.log('uname');
-                return done(null, false, { message: 'Incorrect username.' });
+                return done(null, false, req.flash('unm', 'Incorrect username'));
             }
             if (user.password != password) {
                 console.log('pword');
-                return done(null, false, { message: 'Incorrect password.' });
+                return done(null, false, req.flash('pwd', 'Incorrect password'));
             }
             console.log('corr');
-            return done(null, user, 'message sample');
+            return done(null, user, req.flash('crr', 'success'));
         });
     }
 ));
@@ -81,14 +81,16 @@ function isUserAuthenticated(req, res, next) {
 
 // Routes
 app.get('/', (req, res) => {
-    res.render('index');
+    let msg = req.flash('crr');
+    res.render('index', {
+        message: msg
+    });
 });
 
-
 app.get('/login', (req, res) => {
-    console.log(req.flash('message'));
+    let msg = req.flash('pwd');
     res.render('login', {
-        message: req.flash()
+        message: msg
     });
 });
 
