@@ -2,7 +2,7 @@
 const express = require('express');
 const app = express();
 const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
+// const LocalStrategy = require('passport-local').Strategy;
 const cookieSession = require('cookie-session');
 const flash = require('connect-flash');
 const mongoose = require('mongoose');
@@ -21,6 +21,8 @@ db.once('open', () => {
     console.log("we're connected!");
 });
 
+require('./config/passport')(passport); // pass passport for configuration
+
 app.use(morgan('dev'));
 
 // cookieSession config
@@ -36,37 +38,6 @@ app.use(flash());
 app.use(passport.initialize()); // Used to initialize passport
 app.use(passport.session()); // Used to persist login sessions
 
-// Strategy config
-passport.use(new LocalStrategy({
-        passReqToCallback: true // allows us to pass back the entire request to the callback
-    },
-    function (req, username, password, done) {
-        User.findOne({ username: username }, function (err, user) {
-            if (err) { return done(err); }
-            if (!user) {
-                console.log('uname');
-                return done(null, false, req.flash('unm', 'Incorrect username'));
-            }
-            if (user.password != password) {
-                console.log('pword');
-                return done(null, false, req.flash('pwd', 'Incorrect password'));
-            }
-            console.log('corr');
-            return done(null, user, req.flash('crr', 'success'));
-        });
-    }
-));
-
-passport.serializeUser(function (user, done) {
-    done(null, user.id);
-});
-
-passport.deserializeUser(function (id, done) {
-    User.findById(id, function (err, user) {
-        done(err, user);
-    });
-});
-
 // view engine
 app.set('view engine', 'pug');
 
@@ -79,16 +50,16 @@ function isUserAuthenticated(req, res, next) {
     }
 }
 
-// Routes
+// Routes =============================================
 app.get('/', (req, res) => {
-    let msg = req.flash('crr');
+    let msg = req.flash('success');
     res.render('index', {
         message: msg
     });
 });
 
 app.get('/login', (req, res) => {
-    let msg = req.flash('pwd');
+    let msg = req.flash('failure');
     res.render('login', {
         message: msg
     });
