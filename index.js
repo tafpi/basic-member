@@ -36,8 +36,10 @@ app.use(passport.session()); // Used to persist login sessions
 // view engine
 app.set('view engine', 'pug');
 
+// routing
 app.use('/', router);
 
+// port
 app.listen(8000, () => {
     console.log('Server Started!');
 });

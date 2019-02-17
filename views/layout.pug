@@ -7,11 +7,17 @@ html
         header
             ul
                 li
-                    a(href='/login') Login
+                    a(href='/') Index
                 li
                     a(href='/secret') Secret
-                li
-                    a(href='/logout') Logout
+                if(!user)
+                    li
+                        a(href='/login') Login
+                    li
+                        a(href='/register') Register
+                if(user)
+                    li
+                        a(href='/logout') Logout
         content
             p #{message}
             block content
